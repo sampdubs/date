@@ -8,10 +8,17 @@ sio = socketio.Server()
 
 players = {}
 
-# when a user connects, show session.html
 @app.route('/')
-def sessions():
-    return render_template('session.html')
+def login():
+    return render_template('login.html')
+
+@app.route('/waiting')
+def waiting():
+    return render_template('waiting.html', players=[player.name for player in players])
+
+@app.route('/play')
+def play():
+    return render_template('game.html')
 
 @sio.on('new player')
 def new_player(sid, data):
