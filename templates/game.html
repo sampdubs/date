@@ -6,11 +6,35 @@
 </head>
 
 <body>
+    <div id="hand">
+        <p>Your hand: {% for card in hand %} {{ card }} {% endfor %}</p>
+    </div>
 
+    <div id="players">
+        {% for player in players %}
+        {% if player.sid != sid %}
+        <p id="{{ player.sid }}">{{ player.name }}</p>
+        {% endif %}
+        {% endfor %}
+    </div>
 </body>
 
 <script src={{ url_for('static', filename='jquery.min.js' ) }}></script>
 <!-- Socket.IO for communication with the server -->
 <script src={{ url_for('static', filename='socket.io.min.js' ) }}></script>
+
+<script>
+    const urlParts = window.location.href.split('/');
+    const oldId = urlParts.pop() || urlParts.pop();
+
+    // emit id change
+    socket.emit('change sid', { 'old': oldId });
+
+    // when I get an sid change message
+    socket.on('change sid', function (data) {
+        // change the player's id
+        $('#' + data.old).attr('id', data.sid);
+    });
+</script>
 
 </html>

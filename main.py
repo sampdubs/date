@@ -18,7 +18,7 @@ def waiting(id):
 
 @app.route('/play/<id>')
 def play(id):
-    return render_template('game.html')
+    return render_template('game.html', players=players.values(), id=id, hand=players[id].hand)
 
 @sio.on('new player')
 def new_player(sid, data):
