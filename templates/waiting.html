@@ -54,6 +54,11 @@
         $('#' + data.old).attr('id', data.sid);
     });
 
+    // when I get the all ready message, redirect to the game page
+    socket.on('all ready', function () {
+        window.location.href = '/play/' + socket.id;
+    });
+
 </script>
 
 </html>

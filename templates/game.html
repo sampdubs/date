@@ -7,14 +7,13 @@
 
 <body>
     <div id="hand">
-        <p>Your hand: {% for card in hand %} {{ card }} {% endfor %}</p>
+        <p>Your hand: {{ hand }}</p>
     </div>
 
     <div id="players">
+        <p>Other players:</p>
         {% for player in players %}
-        {% if player.sid != sid %}
         <p id="{{ player.sid }}">{{ player.name }}</p>
-        {% endif %}
         {% endfor %}
     </div>
 </body>

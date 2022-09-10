@@ -30,9 +30,18 @@
         return false;
     });
 
+    // If I get a name taken message, alert the user and clear the name field
+    socket.on('name taken', function () {
+        alert('Sorry, that name is taken. Please choose another.');
+        $('#name').val('');
+    });
+
     // when I get a new player message, redirect to waiting page
     socket.on('new player', function (data) {
-        window.location.href = '/waiting/' + data.sid;
+        console.log(data, socket.id);
+        if (data.sid == socket.id) {
+            window.location.href = '/waiting/' + data.sid;
+        }
     });
 </script>
 

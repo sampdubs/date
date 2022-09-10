@@ -1,7 +1,7 @@
 from flask import Flask, render_template
 import eventlet, socketio
 from player import Player
-from random import choice
+from random import shuffle
 
 app = Flask(__name__)
 sio = socketio.Server()
@@ -18,10 +18,13 @@ def waiting(id):
 
 @app.route('/play/<id>')
 def play(id):
-    return render_template('game.html', players=players.values(), id=id, hand=players[id].hand)
+    return render_template('game.html', players=[player for player in players.values() if player.sid != id], id=id, hand=", ".join(players[id].hand))
 
 @sio.on('new player')
 def new_player(sid, data):
+    if data['name'] in [player.name for player in players.values()]:
+        sio.emit('name taken', room=sid)
+        return
     player = Player(data['name'], sid)
     players[sid] = player
     print('New player:', player.name)
@@ -44,8 +47,9 @@ def ready(sid, data):
     if all(player.ready for player in players.values()):
         cards = list(range(1, len(players) + 1)) * 4
         for player in players.values():
-            player.dealHand([choice(cards) for _ in range(4)])
-            sio.emit('deal hand', {'hand': player.hand}, room=sid)
+            shuffle(cards)
+            player.dealHand([cards.pop() for _ in range(4)])
+            sio.emit('all ready')
             print('Dealt hand', player.hand,'to', player.name)
 
 if __name__ == '__main__':
