@@ -12,12 +12,12 @@ players = {}
 def login():
     return render_template('login.html')
 
-@app.route('/waiting')
-def waiting():
-    return render_template('waiting.html', players=[player.name for player in players])
+@app.route('/waiting/<id>')
+def waiting(id):
+    return render_template('waiting.html', players=players.values(), id=id)
 
-@app.route('/play')
-def play():
+@app.route('/play/<id>')
+def play(id):
     return render_template('game.html')
 
 @sio.on('new player')
@@ -26,6 +26,15 @@ def new_player(sid, data):
     players[sid] = player
     print('New player:', player.name)
     sio.emit('new player', {'name': player.name, 'sid': player.sid})
+
+@sio.on('change sid')
+def change_sid(sid, data):
+    if data['old'] in players:
+        players[data['old']].sid = sid
+        players[sid] = players[data['old']]
+        del players[data['old']]
+        print('Player sid changed:', players[sid].name)
+        sio.emit('change sid', {'name': players[sid].name, 'sid': players[sid].sid, 'old': data['old']})
 
 @sio.on('ready')
 def ready(sid, data):
@@ -36,7 +45,7 @@ def ready(sid, data):
         cards = list(range(1, len(players) + 1)) * 4
         for player in players.values():
             player.dealHand([choice(cards) for _ in range(4)])
-            sio.emit('deal hand', {'hand': player.cards}, room=sid)
+            sio.emit('deal hand', {'hand': player.hand}, room=sid)
             print('Dealt hand', player.hand,'to', player.name)
 
 if __name__ == '__main__':

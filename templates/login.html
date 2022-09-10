@@ -1,38 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <title>Waiting for players...</title>
-    </head>
 
-    <body>
-        <form>
-            <label>
-                Enter your name:
-            </label>
-            <input type="text" id="name">
-            <br>
-            <input type="submit" value="Submit">
-        </form>
-    </body>
+<head>
+    <title>Waiting for players...</title>
+</head>
 
-    <script src="static/jquery.min.js"></script>
-    <!-- Socket.IO for communication with the server -->
-    <script src="static/socket.io.min.js"></script>
+<body>
+    <form>
+        <label>
+            Enter your name:
+        </label>
+        <input type="text" id="name">
+        <br>
+        <input type="submit" value="Submit">
+    </form>
+</body>
 
-    <script>
-        // Connect to the socket.io server
-        var socket = io.connect('http://' + document.domain + ':' + location.port);
+<script src={{ url_for('static', filename='jquery.min.js') }}></script>
+<!-- Socket.IO for communication with the server -->
+<script src={{ url_for('static', filename='socket.io.min.js') }}></script>
 
-        // when the form is submitted, send the name to the server
-        $('form').submit(function() {
-            socket.emit('new player', {'name': $('#name').val()});
-            return false;
-        });
+<script>
+    // Connect to the socket.io server
+    const socket = io.connect('http://' + document.domain + ':' + location.port);
 
-        // when I get a new player message, redirect to waiting page
-        socket.on('new player', function(data) {
-            window.location.href = '/waiting';
-        });
-    </script>
-    
+    // when the form is submitted, send the name to the server
+    $('form').submit(function () {
+        socket.emit('new player', { 'name': $('#name').val() });
+        return false;
+    });
+
+    // when I get a new player message, redirect to waiting page
+    socket.on('new player', function (data) {
+        window.location.href = '/waiting/' + data.sid;
+    });
+</script>
+
 </html>

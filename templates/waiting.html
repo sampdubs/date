@@ -1,10 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <title>Waiting for players...</title>
-    </head>
 
-    <body>
-        
-    </body>
+<head>
+    <title>Waiting for players...</title>
+</head>
+
+<body>
+    <div id="players">
+        {% for player in players %}
+        <p id="{{ player.sid }}">{{ player.name }}: {% if player.ready %} Ready {% else %} Not ready {% endif %}</p>
+        {% endfor %}
+    </div>
+
+    <button id="ready">Ready</button>
+</body>
+
+<script src={{ url_for('static', filename='jquery.min.js') }}></script>
+<!-- Socket.IO for communication with the server -->
+<script src={{ url_for('static', filename='socket.io.min.js') }}></script>
+
+<script>
+    // Connect to the socket.io server
+    const socket = io.connect('http://' + document.domain + ':' + location.port);
+
+    const urlParts = window.location.href.split('/');
+    const oldId = urlParts.pop() || urlParts.pop();
+
+    // emit id change
+    socket.emit('change sid', { 'old': oldId });
+
+    // when the ready button is pressed, send ready message
+    $('#ready').click(function () {
+        socket.emit('ready', { 'ready': true });
+        // hide the ready button
+        $('#ready').hide();
+    });
+
+    // when I get a new player message
+    socket.on('new player', function (data) {
+        // append the new player to the div
+        $('#players').append('<p id="' + data.sid + '">' + data.name + ': Not ready</p>');
+    });
+
+    // when I get a ready message
+    socket.on('ready', function (data) {
+        // change the player's status to ready
+        $('#' + data.sid).text(data.name + ': Ready');
+    });
+
+    // when I get an sid change message
+    socket.on('change sid', function (data) {
+        // change the player's id
+        $('#' + data.old).attr('id', data.sid);
+    });
+
+</script>
+
 </html>
