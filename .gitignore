@@ -1,3 +1,4 @@
 .DS_Store
 .main.py.swp
 .vscode/
+__pycache__/
