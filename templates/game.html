@@ -13,7 +13,7 @@
     <div id="players">
         <p>Other players:</p>
         {% for player in players %}
-        <p id="{{ player.sid }}">{{ player.name }}</p>
+        <p id="{{ player.sid }}" class="player">{{ player.name }}</p>
         {% endfor %}
     </div>
 </body>
@@ -47,7 +47,7 @@
         for (let i = 0; i < order.length; i++) {
             // if the player is not me
             if (order[i].sid != socket.id) {
-                $('#players').append('<p id="' + order[i].sid + '">' + order[i].name + '</p>');
+                $('#players').append('<p id="' + order[i].sid + '" class="player">' + order[i].name + '</p>');
             }
         }
     });
@@ -65,7 +65,35 @@
         if (socket.id != turn) {
             $('#' + turn).append(' *');
         }
+
+        // if it's my turn, add buttons next to other players' names that say "ask"
+        if (socket.id == turn) {
+            $('.player').each(function () {
+                $(this).append(' <button id="askout' + $(this).attr('id') + '" class="askout">Ask on a date</button>');
+            });
+        }
     });
+
+    // when an askout button is clicked, emit an askout message
+    $(document).on('click', '.askout', function () {
+        socket.emit('ask out', { 'sid': $(this).attr('id').replace('askout', '') });
+    });
+
+    // when I get an ask out message, add a button next to the player who asked me out
+    socket.on('ask out', function (data) {
+        if (data.target == socket.id) {
+            $('#' + data.origin).append(' <button id="accept' + data.origin + '" class="accept">Accept date request</button>');
+        }
+    });
+
+    // when an accept button is clicked, emit an accept message
+    $(document).on('click', '.accept', function () {
+        console.log
+        socket.emit('accept', { 'sid': $(this).attr('id').replace('accept', '') });
+        // remove the button
+        $(this).remove();
+    });
+
 </script>
 
 </html>

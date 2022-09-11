@@ -75,6 +75,15 @@ def ready(sid, data):
         playing = True
         sio.emit('all ready')
 
+@sio.on('ask out')
+def askout(sid, data):
+    sio.emit('ask out', {'origin': sid, 'target': data['sid']})
+    print(sid, "asked out", data['sid'])
+
+@sio.on('accept')
+def accept(sid, data):
+    print(sid, "accepted", data['sid'])
+
 if __name__ == '__main__':
     # initialize the app with flask and socketio
     app = socketio.Middleware(sio, app)
