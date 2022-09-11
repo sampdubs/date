@@ -82,6 +82,7 @@ def askout(sid, data):
 
 @sio.on('accept')
 def accept(sid, data):
+    sio.emit('accept', {'origin': sid, 'target': data['sid']})
     print(sid, "accepted", data['sid'])
 
 if __name__ == '__main__':

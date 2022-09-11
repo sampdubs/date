@@ -77,6 +77,10 @@
     // when an askout button is clicked, emit an askout message
     $(document).on('click', '.askout', function () {
         socket.emit('ask out', { 'sid': $(this).attr('id').replace('askout', '') });
+        // delete all ask out buttons
+        $('.askout').remove();
+        // add a pending message next to the player I just asked out
+        $('#' + $(this).attr('id').replace('askout', '')).append('<p id="pending">Date requested...</p>');
     });
 
     // when I get an ask out message, add a button next to the player who asked me out
@@ -92,6 +96,17 @@
         socket.emit('accept', { 'sid': $(this).attr('id').replace('accept', '') });
         // remove the button
         $(this).remove();
+        // add a date accepted message next to the player who's date I just accepted
+        $('#' + $(this).attr('id').replace('accept', '')).append('<span id="accepted">Date accepted!</span>');
+
+    });
+
+    // when I get an accept message
+    socket.on('accept', function (data) {
+        // remove the pending message
+        $('#pending').remove();
+        // add a date message next to the player who accepted my request
+        $('#' + data.origin).append('<span id="accepted">Date accepted!</span>');
     });
 
 </script>
