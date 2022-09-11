@@ -27,7 +27,7 @@
     const oldId = urlParts.pop() || urlParts.pop();
 
     // emit id change
-    socket.emit('change sid', { 'old': oldId });
+    socket.emit('change sid 1', { 'old': oldId });
 
     // when the ready button is pressed, send ready message
     $('#ready').click(function () {

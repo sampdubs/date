@@ -23,16 +23,48 @@
 <script src={{ url_for('static', filename='socket.io.min.js' ) }}></script>
 
 <script>
+    const socket = io.connect('http://' + document.domain + ':' + location.port);
+
     const urlParts = window.location.href.split('/');
     const oldId = urlParts.pop() || urlParts.pop();
+    let turn = '';
 
     // emit id change
-    socket.emit('change sid', { 'old': oldId });
+    socket.emit('change sid 2', { 'old': oldId });
 
     // when I get an sid change message
     socket.on('change sid', function (data) {
         // change the player's id
         $('#' + data.old).attr('id', data.sid);
+    });
+
+    // when I get the order message, remake the players div in that order
+    socket.on('order', function (data) {
+        // change the player's id
+        $('#players').empty();
+        $('#players').append('<p>Other players:</p>');
+        const order = data.order;
+        for (let i = 0; i < order.length; i++) {
+            // if the player is not me
+            if (order[i].sid != socket.id) {
+                $('#players').append('<p id="' + order[i].sid + '">' + order[i].name + '</p>');
+            }
+        }
+    });
+
+    // when I get the turn message, change the turn
+    socket.on('turn', function (data) {
+        // remove the askterisk from the player who's turn it was if it wasn't me
+        if (turn != socket.id && turn != '') {
+            $('#' + turn).text($('#' + turn).text().replace(' *', ''));
+        }
+
+        turn = data.sid;
+
+        // if it's not my turn, put an asterisk next to the player who's turn it is
+        if (socket.id != turn) {
+            $('#' + turn).append(' *');
+        }
     });
 </script>
 

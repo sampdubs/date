@@ -7,10 +7,15 @@ app = Flask(__name__)
 sio = socketio.Server()
 
 players = {}
+playing = False
+order = []
+turn = 0
 
 @app.route('/')
 def login():
-    return render_template('login.html')
+    if not playing:
+        return render_template('login.html')
+    return "Sorry, the game is already in progress."
 
 @app.route('/waiting/<id>')
 def waiting(id):
@@ -18,7 +23,7 @@ def waiting(id):
 
 @app.route('/play/<id>')
 def play(id):
-    return render_template('game.html', players=[player for player in players.values() if player.sid != id], id=id, hand=", ".join(players[id].hand))
+    return render_template('game.html', players=[player for player in players.values() if player.sid != id], id=id, hand=", ".join(sorted(map(str, players[id].hand))))
 
 @sio.on('new player')
 def new_player(sid, data):
@@ -30,14 +35,30 @@ def new_player(sid, data):
     print('New player:', player.name)
     sio.emit('new player', {'name': player.name, 'sid': player.sid})
 
-@sio.on('change sid')
-def change_sid(sid, data):
+@sio.on('change sid 1')
+def change_sid1(sid, data):
     if data['old'] in players:
         players[data['old']].sid = sid
         players[sid] = players[data['old']]
         del players[data['old']]
         print('Player sid changed:', players[sid].name)
         sio.emit('change sid', {'name': players[sid].name, 'sid': players[sid].sid, 'old': data['old']})
+
+@sio.on('change sid 2')
+def change_sid2(sid, data):
+    if data['old'] in players:
+        players[data['old']].sid = sid
+        players[sid] = players[data['old']]
+        del players[data['old']]
+        print('Player sid changed:', players[sid].name)
+        sio.emit('change sid', {'name': players[sid].name, 'sid': players[sid].sid, 'old': data['old']})
+        order.append(sid)
+        if len(order) == len(players):
+            # All players have joined, start the game
+            print('Starting game, order:', order)
+            sio.emit('order', {'order': [{'name': players[sid].name, 'sid': sid} for sid in order]})
+            sio.emit('turn', {'sid': order[turn]})
+
 
 @sio.on('ready')
 def ready(sid, data):
@@ -49,8 +70,10 @@ def ready(sid, data):
         for player in players.values():
             shuffle(cards)
             player.dealHand([cards.pop() for _ in range(4)])
-            sio.emit('all ready')
             print('Dealt hand', player.hand,'to', player.name)
+        global playing
+        playing = True
+        sio.emit('all ready')
 
 if __name__ == '__main__':
     # initialize the app with flask and socketio
