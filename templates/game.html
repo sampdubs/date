@@ -9,12 +9,15 @@
     <div id="hand">
         <p>Your hand: {{ hand }}</p>
     </div>
-
+    <p>Other players:</p>
     <div id="players">
-        <p>Other players:</p>
         {% for player in players %}
         <p id="{{ player.sid }}" class="player">{{ player.name }}</p>
         {% endfor %}
+    </div>
+    <p>Game Log:</p>
+    <div id="log" style="bottom: 0; position: fixed; overflow: scroll; height: 30%; width: 100%;">
+        
     </div>
 </body>
 
@@ -28,6 +31,11 @@
     const urlParts = window.location.href.split('/');
     const oldId = urlParts.pop() || urlParts.pop();
     let turn = '';
+
+    // log function that adds a message to the log div
+    function log(message) {
+        $('#log').append($('<p>').text(message));
+    }
 
     // emit id change
     socket.emit('change sid 2', { 'old': oldId });
@@ -72,6 +80,9 @@
                 $(this).append(' <button id="askout' + $(this).attr('id') + '" class="askout">Ask on a date</button>');
             });
         }
+
+        // log that the player's turn has changed
+        log($('#' + turn).text() + '\'s turn.');
     });
 
     // when an askout button is clicked, emit an askout message
@@ -88,6 +99,8 @@
         if (data.target == socket.id) {
             $('#' + data.origin).append(' <button id="accept' + data.origin + '" class="accept">Accept date request</button>');
         }
+
+        log($('#' + data.origin).text() + ' asked out ' + $('#' + data.target).text() + '.');
     });
 
     // when an accept button is clicked, emit an accept message
@@ -107,6 +120,8 @@
         $('#pending').remove();
         // add a date message next to the player who accepted my request
         $('#' + data.origin).append('<span id="accepted">Date accepted!</span>');
+
+        log($('#' + data.origin).text() + ' and ' + $('#' + data.target).text() + ' are on a date.');
     });
 
 </script>
