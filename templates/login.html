@@ -24,6 +24,11 @@
     // Connect to the socket.io server
     const socket = io.connect('http://' + document.domain + ':' + location.port);
 
+    // When the page is ready, focus the input box
+    $(document).ready(function () {
+        $('#name').focus();
+    });
+
     // when the form is submitted, send the name to the server
     $('form').submit(function () {
         socket.emit('new player', { 'name': $('#name').val() });

@@ -57,7 +57,7 @@ def change_sid2(sid, data):
             # All players have joined, start the game
             print('Starting game, order:', order)
             sio.emit('order', {'order': [{'name': players[sid].name, 'sid': sid} for sid in order]})
-            sio.emit('turn', {'sid': order[turn]})
+            sio.emit('turn', {'sid': order[turn], 'log': players[order[turn]].name + '\'s turn'})
 
 
 @sio.on('ready')
@@ -77,12 +77,12 @@ def ready(sid, data):
 
 @sio.on('ask out')
 def askout(sid, data):
-    sio.emit('ask out', {'origin': sid, 'target': data['sid']})
+    sio.emit('ask out', {'origin': sid, 'target': data['sid'], 'log': players[sid].name + ' asked out ' + players[data['sid']].name})
     print(sid, "asked out", data['sid'])
 
 @sio.on('accept')
 def accept(sid, data):
-    sio.emit('accept', {'origin': sid, 'target': data['sid']})
+    sio.emit('accept', {'origin': sid, 'target': data['sid'], 'log': players[sid].name + ' and ' + players[data['sid']].name + ' are on a date.'})
     print(sid, "accepted", data['sid'])
 
 if __name__ == '__main__':

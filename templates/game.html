@@ -81,8 +81,7 @@
             });
         }
 
-        // log that the player's turn has changed
-        log($('#' + turn).text() + '\'s turn.');
+        log(data.log);
     });
 
     // when an askout button is clicked, emit an askout message
@@ -91,7 +90,7 @@
         // delete all ask out buttons
         $('.askout').remove();
         // add a pending message next to the player I just asked out
-        $('#' + $(this).attr('id').replace('askout', '')).append('<p id="pending">Date requested...</p>');
+        $('#' + $(this).attr('id').replace('askout', '')).append('<span id="pending">Date requested...</span>');
     });
 
     // when I get an ask out message, add a button next to the player who asked me out
@@ -100,7 +99,7 @@
             $('#' + data.origin).append(' <button id="accept' + data.origin + '" class="accept">Accept date request</button>');
         }
 
-        log($('#' + data.origin).text() + ' asked out ' + $('#' + data.target).text() + '.');
+        log(data.log);
     });
 
     // when an accept button is clicked, emit an accept message
@@ -121,7 +120,7 @@
         // add a date message next to the player who accepted my request
         $('#' + data.origin).append('<span id="accepted">Date accepted!</span>');
 
-        log($('#' + data.origin).text() + ' and ' + $('#' + data.target).text() + ' are on a date.');
+        log(data.log);
     });
 
 </script>
