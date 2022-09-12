@@ -2,15 +2,15 @@
 <html lang="en">
 
 <head>
-    <title>Waiting for players...</title>
+    <title>Play Date!</title>
 </head>
 
 <body>
-    <h1>Player: {{ thisPlayer }}</h1>
+    <h3>Player: {{ thisPlayer }}</h3>
     <div id="handDiv">
-        <p id="handContainer">Your hand: <span id="hand">{{ hand }}</span></p>
+        <p id="handContainer"><b>Your hand:</b> <span id="hand">{{ hand }}</span></p>
     </div>
-    <p>Other players:</p>
+    <p><b>Other players:</b></p>
     <div id="players">
         {% for player in players %}
         <p id="{{ player.sid }}" class="player">{{ player.name }}</p>
