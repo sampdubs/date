@@ -127,9 +127,10 @@
             $('#handDiv').append('<p class="trust">Select a trust card: </p>');
             // retrieve my hand as a list
             let hand = $('#hand').text().split(', ');
+            const uniqueHand = [...new Set(hand)];
             // add a button for each trust card
-            for (let i = 0; i < hand.length; i++) {
-                $('#handDiv').append('<button id="trustcard' + hand[i] + '" class="trust">' + hand[i] + '</button>');
+            for (let i = 0; i < uniqueHand.length; i++) {
+                $('#handDiv').append('<button id="trustcard' + uniqueHand[i] + '" class="trust">' + uniqueHand[i] + '</button>');
             }
             // when a trust card button is clicked, emit a trust exchange message
             $(document).on('click', '.trust', function () {
