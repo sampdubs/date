@@ -16,7 +16,7 @@
         {% endfor %}
     </div>
     <p>Game Log:</p>
-    <div id="log" style="bottom: 0; position: fixed; overflow: scroll; height: 30%; width: 100%;">
+    <div id="log" style="overflow: scroll; width: 100%;">
         
     </div>
 </body>
@@ -154,6 +154,132 @@
         if (data['target'] == socket.id) {
             // Add a p right after handContainer saying what trust card I received
             $('#handContainer').after('<p id="trustHand">Trust card: ' + data['card'] + '</p>');
+        }
+
+        if (turn == socket.id && $("#trustHand").length > 0 && $(".trust").length == 0) {
+            // Trust cards have been exchanged
+            const so = data['target'] == socket.id ? data['origin'] : data['target'];
+            // Add buttons next to so saying "ask on a second date" and "no second date"
+            $('#' + so).append(' <button id="yessecond" class="second">Ask on a second date</button>');
+            $('#' + so).append(' <button id="nosecond" class="second">No second date</button>');
+            // When the yessecond button is clicked, emit a second date invite
+            $(document).on('click', '#yessecond', function () {
+                socket.emit('second date invite', { 'target': so });
+                // remove the buttons
+                $('.second').remove();
+            });
+            // When the nosecond button is clicked, emit a no second date message
+            $(document).on('click', '#nosecond', function () {
+                socket.emit('no second date', { 'target': so });
+                // remove the buttons
+                $('.second').remove();
+                // Remove accepted
+                $('#accepted').remove();
+                // send back the trust card
+                const trust = $('#trustHand').text().replace('Trust card: ', '');
+                socket.emit('return trust', { 'card': trust, 'target': so });
+                // Delete the trust hand
+                $('#trustHand').remove();
+            });
+        }
+
+        log(data.log);
+    });
+
+    // whe I get a no second date message
+    socket.on('no second date', function (data) {
+        if (data.target == socket.id) {
+            // Remove accepted
+            $('#accepted').remove();
+            // send back the trust card
+            const trust = $('#trustHand').text().replace('Trust card: ', '');
+            socket.emit('return trust', { 'card': trust, 'target': data.origin });
+            // Delete the trust hand
+            $('#trustHand').remove();
+        }
+
+        log(data.log);
+    });
+
+    // when I get a return trust message
+    socket.on('return trust', function (data) {
+        if (data.target == socket.id) {
+            // Add the trust card to my hand
+            $('#hand').append(', ' + data.card);
+        }
+
+        log(data.log);
+    })
+
+    // when I get a second date invite message
+    socket.on('second date invite', function (data) {
+        // add a button next to the player who sent me a second date invite
+        if (data.target == socket.id) {
+            // Add a accept and reject button
+            $('#' + data.origin).append(' <button id="acceptsecond' + data.origin + '" class="acceptsecond">Accept second date invite</button>');
+            $('#' + data.origin).append(' <button id="rejectsecond' + data.origin + '" class="acceptsecond">Reject second date invite</button>');
+            // when the acceptsecond button is clicked, emit an accept second date message
+            $(document).on('click', '#acceptsecond' + data.origin, function () {
+                // remove the buttons
+                $(".acceptsecond").remove();
+                // add a date accepted message next to the player who's second date I just accepted
+                $('#' + data.origin).append('<span id="relationship"> In a relationship</span>');
+                // Get the value of the trust card
+                const trust = $('#trustHand').text().replace('Trust card: ', '');
+                socket.emit('accept second date', { 'target': data.origin, 'card': trust });
+                // Add the trust card to the hand
+                $('#hand').append(', ' + trust);
+                // Remove the trustHand and accepted
+                $('#trustHand').remove();
+                $('#accepted').remove();
+            });
+            // when the rejectsecond button is clicked, emit a reject second date message
+            $(document).on('click', '#rejectsecond' + data.origin, function () {
+                // remove the buttons
+                $(".acceptsecond").remove();
+                // Get the value of the trust card
+                const trust = $('#trustHand').text().replace('Trust card: ', '');
+                socket.emit('reject second date', { 'target': data.origin });
+                // Return the trust card
+                socket.emit('return trust', { 'card': trust, 'target': data.origin });
+                // Remove the trustHand and accepted
+                $('#trustHand').remove();
+                $('#accepted').remove();
+            });
+        }
+
+        log(data.log);
+    });
+
+    // when I get an accept second date message
+    socket.on('accept second date', function (data) {
+        if (data.target == socket.id) {
+            // add a date accepted message next to the player who accepted my second date invite
+            $('#' + data.origin).append('<span id="relationship"> In a relationship</span>');
+                // Get the value of the trust card
+                const trust = $('#trustHand').text().replace('Trust card: ', '');
+                // Add the trust card to the hand
+                $('#hand').append(', ' + trust);
+                // Remove the trustHand and accepted
+                $('#trustHand').remove();
+                $('#accepted').remove();
+        }
+
+        log(data.log);
+    });
+
+    // when I get a reject second date message
+    socket.on('reject second date', function (data) {
+        if (data.target == socket.id) {
+            // Remove accepted
+            $('#accepted').remove();
+            // Get the value of the trust card
+            const trust = $('#trustHand').text().replace('Trust card: ', '');
+            // Return the trust card
+            socket.emit('return trust', { 'card': trust, 'target': data.origin });
+            // Remove the trustHand and accepted
+            $('#trustHand').remove();
+            $('#accepted').remove();
         }
 
         log(data.log);

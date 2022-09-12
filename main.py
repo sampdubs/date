@@ -87,8 +87,36 @@ def accept(sid, data):
 
 @sio.on('trust exchange')
 def trust_exchange(sid, data):
+    players[sid].hand.remove(int(data['card']))
     sio.emit('trust exchange', {'origin': sid, 'target': data['target'], 'card': data['card'], 'log': players[sid].name + ' sent ' + players[data['target']].name + ' a trust card.'})
     print(sid, "sent", data['card'], "as a trust card to", data['target'])
+
+@sio.on('second date invite')
+def second_date_invite(sid, data):
+    sio.emit('second date invite', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' invited ' + players[data['target']].name + ' to a second date.'})
+    print(sid, "invited", data['target'], "to a second date")
+
+@sio.on('no second date')
+def no_second_date(sid, data):
+    sio.emit('no second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' did not invite ' + players[data['target']].name + 'on a second date.'})
+    print(sid, "did not invide", data['target'], "on a second date")
+
+@sio.on('return trust')
+def return_trust(sid, data):
+    players[data['target']].hand.append(int(data['card']))
+    sio.emit('return trust', {'origin': sid, 'target': data['target'], 'card': data['card'], 'log': players[sid].name + ' returned a trust card to ' + players[data['target']].name + '.'})
+    print(sid, "returned", data['card'], "to", data['target'], "a trust card")
+
+@sio.on('accept second date')
+def accept_second_date(sid, data):
+    players[sid].hand.append(int(data['card']))
+    sio.emit('accept second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' accepted ' + players[data['target']].name + '\'s second date.'})
+    print(sid, "accepted", data['target'], " second date invite")
+
+@sio.on('reject second date')
+def reject_second_date(sid, data):
+    sio.emit('reject second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' rejected ' + players[data['target']].name + '\'s second date.'})
+    print(sid, "rejected", data['target'], " second date invite")
 
 if __name__ == '__main__':
     # initialize the app with flask and socketio
