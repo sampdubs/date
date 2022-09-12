@@ -16,7 +16,7 @@
         {% endfor %}
     </div>
     <p>Game Log:</p>
-    <div id="log" style="overflow: scroll; width: 100%;">
+    <div id="log" style="overflow: scroll; width: 100%; height: 50%;">
         
     </div>
 </body>
@@ -91,12 +91,14 @@
         $('.askout').remove();
         // add a pending message next to the player I just asked out
         $('#' + $(this).attr('id').replace('askout', '')).append('<span id="pending">Date requested...</span>');
+        return false;
     });
 
-    // when I get an ask out message, add a button next to the player who asked me out
+    // when I get an ask out message, add buttons next to the player who asked me out
     socket.on('ask out', function (data) {
         if (data.target == socket.id) {
-            $('#' + data.origin).append(' <button id="accept' + data.origin + '" class="accept">Accept date request</button>');
+            $('#' + data.origin).append(' <button id="accept' + data.origin + '" class="accept dateRequest">Accept date request</button>');
+            $('#' + data.origin).append(' <button id="reject' + data.origin + '" class="reject dateRequest">Reject date request</button>');
         }
 
         log(data.log);
@@ -104,13 +106,20 @@
 
     // when an accept button is clicked, emit an accept message
     $(document).on('click', '.accept', function () {
-        console.log
         socket.emit('accept', { 'sid': $(this).attr('id').replace('accept', '') });
         // remove the button
-        $(this).remove();
+        $(".dateRequest").remove();
         // add a date accepted message next to the player who's date I just accepted
         $('#' + $(this).attr('id').replace('accept', '')).append('<span id="accepted">Date accepted!</span>');
+        return false;
+    });
 
+    // when a reject button is clicked, emit a reject message
+    $(document).on('click', '.reject', function () {
+        socket.emit('reject', { 'sid': $(this).attr('id').replace('reject', '') });
+        // remove the button
+        $(".dateRequest").remove();
+        return false;
     });
 
     // when I get an accept message
@@ -126,26 +135,39 @@
             // add a trust card selection under the hand div
             $('#handDiv').append('<p class="trust">Select a trust card: </p>');
             // retrieve my hand as a list
-            let hand = $('#hand').text().split(', ');
+            const hand = $('#hand').text().split(', ');
             const uniqueHand = [...new Set(hand)];
             // add a button for each trust card
+            const target = data.target == socket.id ? data.origin : data.target;
             for (let i = 0; i < uniqueHand.length; i++) {
-                $('#handDiv').append('<button id="trustcard' + uniqueHand[i] + '" class="trust">' + uniqueHand[i] + '</button>');
+                $('#handDiv').append('<button id="trustcard' + uniqueHand[i] + '" class="trust ' + target + '">' + uniqueHand[i] + '</button>');
             }
-            // when a trust card button is clicked, emit a trust exchange message
-            $(document).on('click', '.trust', function () {
-                const target = data.target == socket.id ? data.origin : data.target;
-                socket.emit('trust exchange', { 'card': $(this).attr('id').replace('trustcard', ''), 'target': target });
-                // add a message saying what trust card I sent next to target
-                $('#accepted').text('Sent ' + $(this).attr('id').replace('trustcard', '') + ' as a trust card');
-                // remove the first instance of the selected trust card from the hand
-                delete hand[hand.indexOf($(this).attr('id').replace('trustcard', ''))];
-                hand = hand.filter(e => e);
-                $("#hand").text(hand.join(', '));
-                // remove the trust card buttons
-                $('.trust').remove();
-            });
         }
+
+        log(data.log);
+    });
+
+    // when a trust card button is clicked, emit a trust exchange message
+    $(document).on('click', '.trust', function () {
+        // get the target
+        const target = $(this).attr('class').split(' ')[1];
+        socket.emit('trust exchange', { 'card': $(this).text(), 'target': target });
+        // add a message saying what trust card I sent next to target
+        $('#accepted').text('Sent ' + $(this).text() + ' as a trust card');
+        // remove the first instance of the selected trust card from the hand
+        let hand = $('#hand').text().split(', ');
+        delete hand[hand.indexOf($(this).text())];
+        hand = hand.filter(e => e);
+        $("#hand").text(hand.join(', '));
+        // remove the trust card buttons
+        $('.trust').remove();
+        return false;
+    });
+
+    // when I get a reject message
+    socket.on('reject', function (data) {
+        // remove the pending message
+        $('#pending').remove();
 
         log(data.log);
     });
@@ -161,32 +183,38 @@
             // Trust cards have been exchanged
             const so = data['target'] == socket.id ? data['origin'] : data['target'];
             // Add buttons next to so saying "ask on a second date" and "no second date"
-            $('#' + so).append(' <button id="yessecond" class="second">Ask on a second date</button>');
-            $('#' + so).append(' <button id="nosecond" class="second">No second date</button>');
-            // When the yessecond button is clicked, emit a second date invite
-            $(document).on('click', '#yessecond', function () {
-                socket.emit('second date invite', { 'target': so });
-                // remove the buttons
-                $('.second').remove();
-            });
-            // When the nosecond button is clicked, emit a no second date message
-            $(document).on('click', '#nosecond', function () {
-                socket.emit('no second date', { 'target': so });
-                // remove the buttons
-                $('.second').remove();
-                // Remove accepted
-                $('#accepted').remove();
-                // send back the trust card
-                const trust = $('#trustHand').text().replace('Trust card: ', '');
-                socket.emit('return trust', { 'card': trust, 'target': so });
-                // Delete the trust hand
-                $('#trustHand').remove();
-            });
+            $('#' + so).append(' <button id="yessecond' + so + '" class="second">Ask on a second date</button>');
+            $('#' + so).append(' <button id="nosecond' + so + '" class="second">No second date</button>');
         }
 
         log(data.log);
     });
 
+    // when a second date button is clicked
+    $(document).on('click', '.second', function () {
+        // if it's a yes second date button
+        if ($(this).attr('id').includes('yessecond')) {
+            // figure out who the other player is
+            const so = $(this).attr('id').replace('yessecond', '');
+            socket.emit('second date invite', { 'target': so });
+        } else {
+            // if it's a no second date button
+            // figure out who the other player is
+            const so = $(this).attr('id').replace('nosecond', '');
+            socket.emit('no second date', { 'target': so });
+            // Remove accepted
+            $('#accepted').remove();
+            // send back the trust card
+            const trust = $('#trustHand').text().replace('Trust card: ', '');
+            socket.emit('return trust', { 'card': trust, 'target': so });
+            // Delete the trust hand
+            $('#trustHand').remove();
+        }
+        // remove the buttons
+        $('.second').remove();
+        return false;
+    });
+    
     // whe I get a no second date message
     socket.on('no second date', function (data) {
         if (data.target == socket.id) {
@@ -217,39 +245,40 @@
         // add a button next to the player who sent me a second date invite
         if (data.target == socket.id) {
             // Add a accept and reject button
-            $('#' + data.origin).append(' <button id="acceptsecond' + data.origin + '" class="acceptsecond">Accept second date invite</button>');
-            $('#' + data.origin).append(' <button id="rejectsecond' + data.origin + '" class="acceptsecond">Reject second date invite</button>');
-            // when the acceptsecond button is clicked, emit an accept second date message
-            $(document).on('click', '#acceptsecond' + data.origin, function () {
-                // remove the buttons
-                $(".acceptsecond").remove();
-                // add a date accepted message next to the player who's second date I just accepted
-                $('#' + data.origin).append('<span id="relationship"> In a relationship</span>');
-                // Get the value of the trust card
-                const trust = $('#trustHand').text().replace('Trust card: ', '');
-                socket.emit('accept second date', { 'target': data.origin, 'card': trust });
-                // Add the trust card to the hand
-                $('#hand').append(', ' + trust);
-                // Remove the trustHand and accepted
-                $('#trustHand').remove();
-                $('#accepted').remove();
-            });
-            // when the rejectsecond button is clicked, emit a reject second date message
-            $(document).on('click', '#rejectsecond' + data.origin, function () {
-                // remove the buttons
-                $(".acceptsecond").remove();
-                // Get the value of the trust card
-                const trust = $('#trustHand').text().replace('Trust card: ', '');
-                socket.emit('reject second date', { 'target': data.origin });
-                // Return the trust card
-                socket.emit('return trust', { 'card': trust, 'target': data.origin });
-                // Remove the trustHand and accepted
-                $('#trustHand').remove();
-                $('#accepted').remove();
-            });
+            $('#' + data.origin).append(' <button id="acceptsecond' + data.origin + '" class="secondresponse">Accept second date invite</button>');
+            $('#' + data.origin).append(' <button id="rejectsecond' + data.origin + '" class="secondresponse">Reject second date invite</button>');
         }
 
         log(data.log);
+    });
+
+    // when a secondresponse button is clicked
+    $(document).on('click', '.secondresponse', function () {
+        // if it is an accept button
+        if ($(this).attr('id').includes('accept')) {
+            // whos second date invite I'm responding to
+            const so = $(this).attr('id').replace('acceptsecond', '');
+            // add a date accepted message next to the player who's second date I just accepted
+            $('#' + so).append('<span id="relationship"> In a relationship</span>');
+            // Get the value of the trust card
+            const trust = $('#trustHand').text().replace('Trust card: ', '');
+            socket.emit('accept second date', { 'target': so, 'card': trust });
+            // Add the trust card to the hand
+            $('#hand').append(', ' + trust);
+        } else {
+            // whos second date invite I'm responding to
+            const so = $(this).attr('id').replace('rejectsecond', '');
+            // Get the value of the trust card
+            const trust = $('#trustHand').text().replace('Trust card: ', '');
+            socket.emit('reject second date', { 'target': so });
+            // Return the trust card
+            socket.emit('return trust', { 'card': trust, 'target': so });
+        }
+        // Remove the trustHand and accepted and secondresponse buttons
+        $('#trustHand').remove();
+        $('#accepted').remove();
+        $('.secondresponse').remove();
+        return false;
     });
 
     // when I get an accept second date message

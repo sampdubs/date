@@ -12,6 +12,11 @@ order = []
 turn = 0
 couples = {}
 
+def next_turn():
+    global turn
+    turn = (turn + 1) % len(order)
+    sio.emit('turn', {'sid': order[turn], 'log': players[order[turn]].name + '\'s turn'})
+
 @app.route('/')
 def login():
     if not playing:
@@ -85,6 +90,12 @@ def accept(sid, data):
     sio.emit('accept', {'origin': sid, 'target': data['sid'], 'log': players[sid].name + ' and ' + players[data['sid']].name + ' are on a date.'})
     print(sid, "accepted", data['sid'])
 
+@sio.on('reject')
+def reject(sid, data):
+    sio.emit('reject', {'origin': sid, 'target': data['sid'], 'log': players[sid].name + ' rejected ' + players[data['sid']].name + '\'s date.'})
+    print(sid, "rejected", data['sid'])
+    next_turn()
+
 @sio.on('trust exchange')
 def trust_exchange(sid, data):
     players[sid].hand.remove(int(data['card']))
@@ -100,6 +111,7 @@ def second_date_invite(sid, data):
 def no_second_date(sid, data):
     sio.emit('no second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' did not invite ' + players[data['target']].name + 'on a second date.'})
     print(sid, "did not invide", data['target'], "on a second date")
+    next_turn()
 
 @sio.on('return trust')
 def return_trust(sid, data):
@@ -114,11 +126,13 @@ def accept_second_date(sid, data):
     couples[data['target']] = sid
     sio.emit('accept second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' accepted ' + players[data['target']].name + '\'s second date.'})
     print(sid, "accepted", data['target'], " second date invite")
+    next_turn()
 
 @sio.on('reject second date')
 def reject_second_date(sid, data):
     sio.emit('reject second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' rejected ' + players[data['target']].name + '\'s second date.'})
     print(sid, "rejected", data['target'], " second date invite")
+    next_turn()
 
 if __name__ == '__main__':
     # initialize the app with flask and socketio
