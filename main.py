@@ -10,6 +10,7 @@ players = {}
 playing = False
 order = []
 turn = 0
+couples = {}
 
 @app.route('/')
 def login():
@@ -58,7 +59,6 @@ def change_sid2(sid, data):
             print('Starting game, order:', order)
             sio.emit('order', {'order': [{'name': players[sid].name, 'sid': sid} for sid in order]})
             sio.emit('turn', {'sid': order[turn], 'log': players[order[turn]].name + '\'s turn'})
-
 
 @sio.on('ready')
 def ready(sid, data):
@@ -110,6 +110,8 @@ def return_trust(sid, data):
 @sio.on('accept second date')
 def accept_second_date(sid, data):
     players[sid].hand.append(int(data['card']))
+    couples[sid] = data['target']
+    couples[data['target']] = sid
     sio.emit('accept second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' accepted ' + players[data['target']].name + '\'s second date.'})
     print(sid, "accepted", data['target'], " second date invite")
 
@@ -120,7 +122,7 @@ def reject_second_date(sid, data):
 
 if __name__ == '__main__':
     # initialize the app with flask and socketio
-    app = socketio.Middleware(sio, app)
+    app = socketio.WSGIApp(sio, app)
     print('started server')
     # start the server on localhost port 8080
     eventlet.wsgi.server(eventlet.listen(('', 8080)), app, log_output=False)
