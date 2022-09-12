@@ -6,6 +6,7 @@
 </head>
 
 <body>
+    <h1>Player: {{ thisPlayer }}</h1>
     <div id="handDiv">
         <p id="handContainer">Your hand: <span id="hand">{{ hand }}</span></p>
     </div>
@@ -214,7 +215,7 @@
         $('.second').remove();
         return false;
     });
-    
+
     // whe I get a no second date message
     socket.on('no second date', function (data) {
         if (data.target == socket.id) {

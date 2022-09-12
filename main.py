@@ -29,7 +29,7 @@ def waiting(id):
 
 @app.route('/play/<id>')
 def play(id):
-    return render_template('game.html', players=[player for player in players.values() if player.sid != id], id=id, hand=", ".join(sorted(map(str, players[id].hand))))
+    return render_template('game.html', players=[player for player in players.values() if player.sid != id], id=id, hand=", ".join(sorted(map(str, players[id].hand))), thisPlayer=players[id].name)
 
 @sio.on('new player')
 def new_player(sid, data):
