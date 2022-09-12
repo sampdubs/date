@@ -6,8 +6,8 @@
 </head>
 
 <body>
-    <div id="hand">
-        <p>Your hand: {{ hand }}</p>
+    <div id="handDiv">
+        <p id="handContainer">Your hand: <span id="hand">{{ hand }}</span></p>
     </div>
     <p>Other players:</p>
     <div id="players">
@@ -35,6 +35,7 @@
     // log function that adds a message to the log div
     function log(message) {
         $('#log').append($('<p>').text(message));
+        $('#log').scrollTop($('#log')[0].scrollHeight);
     }
 
     // emit id change
@@ -50,7 +51,6 @@
     socket.on('order', function (data) {
         // change the player's id
         $('#players').empty();
-        $('#players').append('<p>Other players:</p>');
         const order = data.order;
         for (let i = 0; i < order.length; i++) {
             // if the player is not me
@@ -118,7 +118,43 @@
         // remove the pending message
         $('#pending').remove();
         // add a date message next to the player who accepted my request
-        $('#' + data.origin).append('<span id="accepted">Date accepted!</span>');
+        if (data.target == socket.id) {
+            $('#' + data.origin).append('<span id="accepted">Date accepted!</span>');
+        }
+
+        if (data.target == socket.id || data.origin == socket.id) {
+            // add a trust card selection under the hand div
+            $('#handDiv').append('<p class="trust">Select a trust card: </p>');
+            // retrieve my hand as a list
+            let hand = $('#hand').text().split(', ');
+            // add a button for each trust card
+            for (let i = 0; i < hand.length; i++) {
+                $('#handDiv').append('<button id="trustcard' + hand[i] + '" class="trust">' + hand[i] + '</button>');
+            }
+            // when a trust card button is clicked, emit a trust exchange message
+            $(document).on('click', '.trust', function () {
+                const target = data.target == socket.id ? data.origin : data.target;
+                socket.emit('trust exchange', { 'card': $(this).attr('id').replace('trustcard', ''), 'target': target });
+                // add a message saying what trust card I sent next to target
+                $('#accepted').text('Sent ' + $(this).attr('id').replace('trustcard', '') + ' as a trust card');
+                // remove the first instance of the selected trust card from the hand
+                delete hand[hand.indexOf($(this).attr('id').replace('trustcard', ''))];
+                hand = hand.filter(e => e);
+                $("#hand").text(hand.join(', '));
+                // remove the trust card buttons
+                $('.trust').remove();
+            });
+        }
+
+        log(data.log);
+    });
+
+    // when I get a trust exchange message
+    socket.on('trust exchange', function (data) {
+        if (data['target'] == socket.id) {
+            // Add a p right after handContainer saying what trust card I received
+            $('#handContainer').after('<p id="trustHand">Trust card: ' + data['card'] + '</p>');
+        }
 
         log(data.log);
     });

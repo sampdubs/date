@@ -85,6 +85,11 @@ def accept(sid, data):
     sio.emit('accept', {'origin': sid, 'target': data['sid'], 'log': players[sid].name + ' and ' + players[data['sid']].name + ' are on a date.'})
     print(sid, "accepted", data['sid'])
 
+@sio.on('trust exchange')
+def trust_exchange(sid, data):
+    sio.emit('trust exchange', {'origin': sid, 'target': data['target'], 'card': data['card'], 'log': players[sid].name + ' sent ' + players[data['target']].name + ' a trust card.'})
+    print(sid, "sent", data['card'], "as a trust card to", data['target'])
+
 if __name__ == '__main__':
     # initialize the app with flask and socketio
     app = socketio.Middleware(sio, app)
