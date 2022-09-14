@@ -2,6 +2,7 @@ from flask import Flask, render_template
 import eventlet, socketio
 from player import Player
 from random import shuffle
+from time import sleep
 
 app = Flask(__name__)
 sio = socketio.Server()
@@ -13,9 +14,11 @@ turn = 0
 couples = {}
 
 def next_turn():
+    sleep(0.1)
     global turn
     turn = (turn + 1) % len(order)
     sio.emit('turn', {'sid': order[turn], 'log': players[order[turn]].name + '\'s turn'})
+    print(order[turn] + '\'s turn')
 
 @app.route('/')
 def login():
@@ -63,6 +66,7 @@ def change_sid2(sid, data):
             # All players have joined, start the game
             print('Starting game, order:', order)
             sio.emit('order', {'order': [{'name': players[sid].name, 'sid': sid} for sid in order]})
+            print(order[turn] + '\'s turn')
             sio.emit('turn', {'sid': order[turn], 'log': players[order[turn]].name + '\'s turn'})
 
 @sio.on('ready')
@@ -99,6 +103,7 @@ def reject(sid, data):
 @sio.on('trust exchange')
 def trust_exchange(sid, data):
     players[sid].hand.remove(int(data['card']))
+    players[data['target']].setTrust(int(data['card']))
     sio.emit('trust exchange', {'origin': sid, 'target': data['target'], 'card': data['card'], 'log': players[sid].name + ' sent ' + players[data['target']].name + ' a trust card.'})
     print(sid, "sent", data['card'], "as a trust card to", data['target'])
 
@@ -116,12 +121,14 @@ def no_second_date(sid, data):
 @sio.on('return trust')
 def return_trust(sid, data):
     players[data['target']].hand.append(int(data['card']))
+    players[sid].deleteTrust()
     sio.emit('return trust', {'origin': sid, 'target': data['target'], 'card': data['card'], 'log': players[sid].name + ' returned a trust card to ' + players[data['target']].name + '.'})
     print(sid, "returned", data['card'], "to", data['target'], "a trust card")
 
 @sio.on('accept second date')
 def accept_second_date(sid, data):
-    players[sid].hand.append(int(data['card']))
+    players[sid].addTrustToHand()
+    players[data['target']].addTrustToHand()
     couples[sid] = data['target']
     couples[data['target']] = sid
     sio.emit('accept second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' accepted ' + players[data['target']].name + '\'s second date.'})
@@ -134,9 +141,21 @@ def reject_second_date(sid, data):
     print(sid, "rejected", data['target'], " second date invite")
     next_turn()
 
+@sio.on('ghost')
+def ghost(sid, data):
+    players[sid].addTrustToHand()
+    sio.emit('ghost', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' ghosted ' + players[data['target']].name + '.'})
+    print(sid, "ghosted", data['target'])
+    next_turn()
+
+@sio.on('follow through')
+def follow_through(sid, data):
+    sio.emit('follow through', {'log': players[sid].name + ' followed through with ' + players[data['target']].name + '.'})
+    print(sid, "followed through with", data['target'])
+
 if __name__ == '__main__':
     # initialize the app with flask and socketio
     app = socketio.WSGIApp(sio, app)
     print('started server')
     # start the server on localhost port 8080
-    eventlet.wsgi.server(eventlet.listen(('', 8080)), app, log_output=False)
+    eventlet.wsgi.server(eventlet.listen(('', 8080)), app, log_output=False, debug=True)
