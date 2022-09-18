@@ -148,7 +148,8 @@ def ghost(sid, data):
     players[sid].addTrustToHand()
     sio.emit('ghost', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' ghosted ' + players[data['target']].name + '.'})
     print(sid, "ghosted", data['target'])
-    next_turn()
+    if data['done']:
+        next_turn()
 
 @sio.on('follow through')
 def follow_through(sid, data):

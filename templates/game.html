@@ -100,10 +100,12 @@
                 $('#relationship').text('Awaiting trust card');
             } else if (mustGhost.length == 0) {
                 $('.player').each(function () {
-                    if (!mustGhost.includes($(this).attr('id'))) {
                         $(this).append(' <button id="askout' + $(this).attr('id') + '" class="askout">Ask on a date</button>');
-                    }
                 });
+            }
+            if (mustGhost.length > 0) {
+                // Add awaiting trust card messages to the players I must ghost
+                $('.mustGhost').text(' Awaiting trust card...');
             }
         } else if (mustGhost.includes(turn)) {
             socket.emit('preghost', { 'target': turn });
@@ -157,7 +159,8 @@
             mustGhost.push(relationship);
             relationship = '';
             // replace in a relationship message with must ghost
-            $('#relationship').text('Must ghost next turn');
+            $('#relationship').after('<span class="mustGhost"> Must ghost next turn</span>');
+            $('#relationship').remove();
         }
         // remove the button
         $(".dateRequest").remove();
@@ -231,15 +234,15 @@
             $('#handContainer').after('<p id="trustHand">Trust card: ' + data['card'] + '</p>');
             if (turn == socket.id){
                 if (mustGhost.includes(data['origin'])) {
-                    // emit a ghost message
-                    socket.emit('ghost', { 'target': data['origin'] });
                     mustGhost.remove(data['origin']);
                     // Add the trust card to the hand
                     $('#hand').append(', ' + data['card']);
                     // Remove the trustHand
                     $('#trustHand').remove();
                     // remove the relationship
-                    $('#relationship').remove();
+                    $('#' + data['origin'] + ' > .mustGhost').remove();
+                    // emit a ghost message
+                    socket.emit('ghost', { 'target': data['origin'], 'done': (mustGhost.length + $(".ghost").length) == 0 });
                 } else if (data['origin'] == relationship) {
                     // Remove the relationship message
                     $('#relationship').remove();
@@ -399,7 +402,7 @@
         // get the trust card
         const trust = $('#trustHand').text().replace('Trust card: ', '');
         // emit a ghost message
-        socket.emit('ghost', { 'target': relationship });
+        socket.emit('ghost', { 'target': relationship, 'done': mustGhost.length == 0 });
         relationship = '';
         // Add the trust card to the hand
         $('#hand').append(', ' + trust);
