@@ -13,12 +13,13 @@
     <p><b>Other players:</b></p>
     <div id="players">
         {% for player in players %}
-        <p id="{{ player.sid }}" class="player">{{ player.name }}</p>
+        <p id="{{ player.sid }}" class="player"><span class="name">{{ player.name }}</span></p>
         {% endfor %}
     </div>
     <p>Game Log:</p>
-    <div id="log" style="overflow: scroll; width: 100%; height: 50%; position: fixed; border: 1px solid black; padding: 0px 8px; border-radius: 4px;">
-        
+    <div id="log"
+        style="overflow: scroll; width: 100%; height: 50%; position: fixed; border: 1px solid black; padding: 0px 8px; border-radius: 4px;">
+
     </div>
 </body>
 
@@ -33,12 +34,25 @@
     const oldId = urlParts.pop() || urlParts.pop();
     let turn = '';
     let relationship = '';
+    let mustGhost = [];
 
     // log function that adds a message to the log div
     function log(message) {
         $('#log').append($('<p>').text(message));
         $('#log').scrollTop($('#log')[0].scrollHeight);
     }
+
+    // remove function that removes the first instance of an element from an array
+    Array.prototype.remove = function () {
+        var what, a = arguments, L = a.length, ax;
+        while (L && this.length) {
+            what = a[--L];
+            while ((ax = this.indexOf(what)) !== -1) {
+                this.splice(ax, 1);
+            }
+        }
+        return this;
+    };
 
     // emit id change
     socket.emit('change sid 2', { 'old': oldId });
@@ -57,7 +71,7 @@
         for (let i = 0; i < order.length; i++) {
             // if the player is not me
             if (order[i].sid != socket.id) {
-                $('#players').append('<p id="' + order[i].sid + '" class="player">' + order[i].name + '</p>');
+                $('#players').append('<p id="' + order[i].sid + '" class="player"><span class="name">' + order[i].name + '</span></p>');
             }
         }
     });
@@ -84,11 +98,16 @@
             if (relationship.length > 0) {
                 // Change the relationship message to say awaiting trust card
                 $('#relationship').text('Awaiting trust card');
-            } else {
+            } else if (mustGhost.length == 0) {
                 $('.player').each(function () {
-                    $(this).append(' <button id="askout' + $(this).attr('id') + '" class="askout">Ask on a date</button>');
+                    if (!mustGhost.includes($(this).attr('id'))) {
+                        $(this).append(' <button id="askout' + $(this).attr('id') + '" class="askout">Ask on a date</button>');
+                    }
                 });
             }
+        } else if (mustGhost.includes(turn)) {
+            socket.emit('preghost', { 'target': turn });
+            mustGhost.remove(turn);
         } else if (turn == relationship) {
             // add a trust card selection under the hand div
             $('#handDiv').append('<p class="trust">Select a trust card: </p>');
@@ -117,7 +136,13 @@
     // when I get an ask out message, add buttons next to the player who asked me out
     socket.on('ask out', function (data) {
         if (data.target == socket.id) {
-            $('#' + data.origin).append(' <button id="accept' + data.origin + '" class="accept dateRequest">Accept date request</button>');
+            if (relationship.length == 0) {
+                $('#' + data.origin).append(' <button id="accept' + data.origin + '" class="accept dateRequest">Accept date request</button>');
+            } else {
+                // get the name of the relationship
+                const relationshipName = $('#' + relationship + ' > .name').text();
+                $('#' + data.origin).append(' <button id="accept' + data.origin + '" class="accept dateRequest mustGhost">Accept date request (ghost ' + relationshipName + ')</button>');
+            }
             $('#' + data.origin).append(' <button id="reject' + data.origin + '" class="reject dateRequest">Reject date request</button>');
         }
 
@@ -126,7 +151,14 @@
 
     // when an accept button is clicked, emit an accept message
     $(document).on('click', '.accept', function () {
-        socket.emit('accept', { 'sid': $(this).attr('id').replace('accept', '') });
+        const sid = $(this).attr('id').replace('accept', '');
+        socket.emit('accept', { 'sid': sid });
+        if ($(this).hasClass('mustGhost')) {
+            mustGhost.push(relationship);
+            relationship = '';
+            // replace in a relationship message with must ghost
+            $('#relationship').text('Must ghost next turn');
+        }
         // remove the button
         $(".dateRequest").remove();
         // add a date accepted message next to the player who's date I just accepted
@@ -197,12 +229,24 @@
         if (data['target'] == socket.id) {
             // Add a p right after handContainer saying what trust card I received
             $('#handContainer').after('<p id="trustHand">Trust card: ' + data['card'] + '</p>');
-            if (data['origin'] == relationship && turn == socket.id) {
-                // Remove the relationship message
-                $('#relationship').remove();
-                // Add two buttons next to the relationship saying "ghost" and "follow through"
-                $('#' + relationship).append(' <button id="ghost' + relationship + '" class="ghost">Ghost</button>');
-                $('#' + relationship).append(' <button id="followthrough' + relationship + '" class="followthrough">Follow through</button>');
+            if (turn == socket.id){
+                if (mustGhost.includes(data['origin'])) {
+                    // emit a ghost message
+                    socket.emit('ghost', { 'target': data['origin'] });
+                    mustGhost.remove(data['origin']);
+                    // Add the trust card to the hand
+                    $('#hand').append(', ' + data['card']);
+                    // Remove the trustHand
+                    $('#trustHand').remove();
+                    // remove the relationship
+                    $('#relationship').remove();
+                } else if (data['origin'] == relationship) {
+                    // Remove the relationship message
+                    $('#relationship').remove();
+                    // Add two buttons next to the relationship saying "ghost" and "follow through"
+                    $('#' + relationship).append(' <button id="ghost' + relationship + '" class="ghost">Ghost</button>');
+                    $('#' + relationship).append(' <button id="followthrough' + relationship + '" class="followthrough">Follow through</button>');
+                }
             }
         }
 
@@ -252,6 +296,8 @@
             socket.emit('return trust', { 'card': trust, 'target': data.origin });
             // Delete the trust hand
             $('#trustHand').remove();
+            // remove the relationship
+            $('#relationship').remove();
         }
 
         log(data.log);
@@ -286,6 +332,8 @@
             // whos second date invite I'm responding to
             const so = $(this).attr('id').replace('acceptsecond', '');
             // add a date accepted message next to the player who's second date I just accepted
+            // remove any existing relationship message
+            $('#relationship').remove();
             $('#' + so).append('<span id="relationship"> In a relationship</span>');
             relationship = so;
             // Get the value of the trust card
@@ -313,6 +361,8 @@
     socket.on('accept second date', function (data) {
         if (data.target == socket.id) {
             // add a date accepted message next to the player who accepted my second date invite
+            // remove any existing relationship message
+            $('#relationship').remove();
             $('#' + data.origin).append('<span id="relationship"> In a relationship</span>');
             relationship = data.origin;
             // Get the value of the trust card
@@ -384,6 +434,22 @@
         $('.ghost').remove();
         $('.followthrough').remove();
         return false;
+    });
+
+    // when I get a preghost message
+    socket.on('preghost', function (data) {
+        if (data.target == socket.id) {
+            // remove the awaiting trust card message
+            $('#relationship').remove();
+            $('.player').each(function () {
+                if ($(this).attr('id') != relationship) {
+                    $(this).append(' <button id="askout' + $(this).attr('id') + '" class="askout">Ask on a date</button>');
+                }
+            });
+            relationship = '';
+        }
+
+        log(data.log);
     });
 
     // when I get a ghost message, remove the relationship span

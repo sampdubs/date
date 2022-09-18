@@ -11,7 +11,6 @@ players = {}
 playing = False
 order = []
 turn = 0
-couples = {}
 
 def next_turn():
     sleep(0.1)
@@ -114,8 +113,8 @@ def second_date_invite(sid, data):
 
 @sio.on('no second date')
 def no_second_date(sid, data):
-    sio.emit('no second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' did not invite ' + players[data['target']].name + 'on a second date.'})
-    print(sid, "did not invide", data['target'], "on a second date")
+    sio.emit('no second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' did not invite ' + players[data['target']].name + ' on a second date.'})
+    print(sid, "did not invite", data['target'], "on a second date")
     next_turn()
 
 @sio.on('return trust')
@@ -129,8 +128,6 @@ def return_trust(sid, data):
 def accept_second_date(sid, data):
     players[sid].addTrustToHand()
     players[data['target']].addTrustToHand()
-    couples[sid] = data['target']
-    couples[data['target']] = sid
     sio.emit('accept second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' accepted ' + players[data['target']].name + '\'s second date.'})
     print(sid, "accepted", data['target'], " second date invite")
     next_turn()
@@ -140,6 +137,11 @@ def reject_second_date(sid, data):
     sio.emit('reject second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' rejected ' + players[data['target']].name + '\'s second date.'})
     print(sid, "rejected", data['target'], " second date invite")
     next_turn()
+
+@sio.on('preghost')
+def preghost(sid, data):
+    sio.emit('preghost', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' ghosted ' + players[data['target']].name + '.'})
+    print(sid, "preghosted", data['target'])
 
 @sio.on('ghost')
 def ghost(sid, data):
