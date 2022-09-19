@@ -122,6 +122,7 @@
             if (relationship.length > 0) {
                 // Change the relationship message to say awaiting trust card
                 $('#relationship').text('Awaiting trust card...');
+                $('#relationship').addClass('mustGhost');
             } else if (mustGhost.length == 0) {
                 $('.player').each(function () {
                         $(this).append(' <button id="askout' + $(this).attr('id') + '" class="askout">Ask on a date</button>');
@@ -134,6 +135,7 @@
         } else if (mustGhost.includes(turn)) {
             socket.emit('preghost', { 'target': turn });
             mustGhost.remove(turn);
+            $('.mustGhost').remove();
         } else if (turn == relationship) {
             // add a trust card selection under the hand div
             $('#handDiv').append('<p class="trust">Select a trust card: </p>');
@@ -267,7 +269,7 @@
                     $('#' + data['origin'] + ' > .mustGhost').remove();
                     // emit a ghost message
                     const singleWin = canWinSingle();
-                    socket.emit('ghost', { 'target': data['origin'], 'done': (mustGhost.length + $(".ghost").length) == 0 && !singleWin });
+                    socket.emit('ghost', { 'target': data['origin'], 'done': (mustGhost.length + $(".ghost").length + $(".mustGhost").length) == 0 && !singleWin });
                     if (singleWin) {
                         socket.emit('win single', { 'card': singleWin });
                     }
@@ -287,6 +289,10 @@
             // Add buttons next to so saying "ask on a second date" and "no second date"
             $('#' + so).append(' <button id="yessecond' + so + '" class="second">Ask on a second date</button>');
             $('#' + so).append(' <button id="nosecond' + so + '" class="second">No second date</button>');
+            if (relationship == so) {
+                // Add a button to declare a set
+                $('#' + so).append(' <button id="declare' + so + '" class="second">Declare a set</button>');
+            }
         }
 
         log(data.log);
@@ -299,7 +305,7 @@
             // figure out who the other player is
             const so = $(this).attr('id').replace('yessecond', '');
             socket.emit('second date invite', { 'target': so });
-        } else {
+        } else if ($(this).attr('id').includes('nosecond')) {
             // if it's a no second date button
             // figure out who the other player is
             const so = $(this).attr('id').replace('nosecond', '');
@@ -311,6 +317,15 @@
             socket.emit('return trust', { 'card': trust, 'target': so });
             // Delete the trust hand
             $('#trustHand').remove();
+        } else {
+            // if it's a declare button
+            // figure out who the other player is
+            const so = $(this).attr('id').replace('declare', '');
+            // get the hand and trust card
+            const hand = $('#hand').text().split(', ');
+            const trust = $('#trustHand').text().replace('Trust card: ', '');
+            hand.push(trust);
+            socket.emit('declare set', { 'target': so, 'hand': hand });
         }
         // remove the buttons
         $('.second').remove();
@@ -441,7 +456,7 @@
         const singleWin = canWinSingle();
         console.log(singleWin);
         // emit a ghost message
-        socket.emit('ghost', { 'target': relationship, 'done': mustGhost.length == 0 && !singleWin });
+        socket.emit('ghost', { 'target': relationship, 'done': (mustGhost.length + $(".mustGhost").length) == 0 && !singleWin });
         relationship = '';
         if (singleWin) {
             socket.emit('win single', { 'card': singleWin });
@@ -503,8 +518,65 @@
         log(data.log);
     });
 
-    socket.on('win', function (data) {
+    // when I get a declare set message, check if there's a set of four between my hand and the hand of the player who declared the set
+    socket.on('declare set', function (data) {
+        if (data.target == socket.id) {
+            // get my hand as a list and add the hand of the player
+            const hand = $('#hand').text().split(', ').concat(data['hand']);
+            // get the trust card
+            const trust = $('#trustHand').text().replace('Trust card: ', '');
+            hand.push(trust);
+            console.log(hand);
+            // count the number of each card
+            const counts = {};
+            for (let i = 0; i < hand.length; i++) {
+                counts[hand[i]] = 1 + (counts[hand[i]] || 0);
+            }
+            // if there are four of a kind, emit a win message
+            for (let card in counts) {
+                if (counts[card] == 4) {
+                    socket.emit('win', { 'target': data.origin, 'card': card });
+                    return;
+                }
+            }
+            // if there are no four of a kind, emit a lose message
+            socket.emit('lose', { 'target': data.origin });
+        }
+
         log(data.log);
+    });
+
+    socket.on('win', function (data) {
+        if (data.winners.includes(socket.id)) {
+            // remove the relationship span
+            $('#relationship').remove();
+            $('.second').remove();
+            $('#me').append(' You win!');
+        }
+        for (let winner of data.winners) {
+            $('#' + winner).append(' <b>Winner</b>');
+        }
+        log(data.log);
+        socket.disconnect();
+    });
+
+    socket.on('lose', function (data) {
+        if (data.losers.includes(socket.id)) {
+            // remove the relationship span
+            $('#relationship').remove();
+            $('.second').remove();
+            $('#me').append(' You\'re out');
+            $('body').css('color', 'gray');
+            for (let loser of data.losers) {
+                $('#' + loser).append(' <b>Out</b>');
+            }
+        }
+        log(data.log);
+    });
+
+    socket.on('game over', function (data) {
+        log(data.log);
+        socket.disconnect();
     });
 
 </script>

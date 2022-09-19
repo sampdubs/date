@@ -161,6 +161,35 @@ def win_solo(sid, data):
     sio.emit('win', {'log': '<b>' + players[sid].name + ' won single with a set of ' + data['card'] + 's.</b>'})
     print(sid, "won single with a set of", data['card'] + 's')
 
+@sio.on('declare set')
+def declare_set(sid, data):
+    sio.emit('declare set', {'origin': sid, 'target': data['target'], 'hand': data['hand'], 'log': players[sid].name + ' declared a set with' + players[data['target']].name + '.'})
+    print(sid, "declared with", data['target'], "hand:", data['hand'])
+
+@sio.on('win')
+def win(sid, data):
+    sio.emit('win', {'winners': [sid, data['target']], 'log': '<b>' + players[sid].name + ' and ' + players[data['target']].name + ' won with a set of ' + data['card'] + 's.</b>'})
+    print(sid, "and", data['target'], "won with a set of", data['card'] + 's')
+
+@sio.on('lose')
+def lose(sid, data):
+    sio.emit('lose', {'losers': [sid, data['target']], 'log': '<b>' + players[sid].name + ' and ' + players[data['target']].name + ' lost by falsly declaring a set.</b>'})
+    global turn
+    next_player = order[(turn + 1) % len(order)]
+    if next_player == data['target']:
+        next_player = order[(turn + 2) % len(order)]
+    order.remove(sid)
+    order.remove(data['target'])
+    print(sid, "and", data['target'], "lost")
+    print(order)
+    if len(order) > 0:
+        turn = order.index(next_player) - 1
+        next_turn()
+    else:
+        sio.emit('game over', {'log': '<b>Game over. Everyone is out.</b>'})
+        print('game over')
+
+
 if __name__ == '__main__':
     # initialize the app with flask and socketio
     app = socketio.WSGIApp(sio, app)
