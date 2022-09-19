@@ -129,13 +129,13 @@ def accept_second_date(sid, data):
     players[sid].addTrustToHand()
     players[data['target']].addTrustToHand()
     sio.emit('accept second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' accepted ' + players[data['target']].name + '\'s second date.'})
-    print(sid, "accepted", data['target'], " second date invite")
+    print(sid, "accepted", data['target'], "second date invite")
     next_turn()
 
 @sio.on('reject second date')
 def reject_second_date(sid, data):
     sio.emit('reject second date', {'origin': sid, 'target': data['target'], 'log': players[sid].name + ' rejected ' + players[data['target']].name + '\'s second date.'})
-    print(sid, "rejected", data['target'], " second date invite")
+    print(sid, "rejected", data['target'], "second date invite")
     next_turn()
 
 @sio.on('preghost')
@@ -155,6 +155,11 @@ def ghost(sid, data):
 def follow_through(sid, data):
     sio.emit('follow through', {'log': players[sid].name + ' followed through with ' + players[data['target']].name + '.'})
     print(sid, "followed through with", data['target'])
+
+@sio.on('win single')
+def win_solo(sid, data):
+    sio.emit('win', {'log': '<b>' + players[sid].name + ' won single with a set of ' + data['card'] + 's.</b>'})
+    print(sid, "won single with a set of", data['card'] + 's')
 
 if __name__ == '__main__':
     # initialize the app with flask and socketio

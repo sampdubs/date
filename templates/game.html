@@ -38,7 +38,7 @@
 
     // log function that adds a message to the log div
     function log(message) {
-        $('#log').append($('<p>').text(message));
+        $('#log').append($('<p>').html(message));
         $('#log').scrollTop($('#log')[0].scrollHeight);
     }
 
@@ -53,6 +53,24 @@
         }
         return this;
     };
+
+    // canWinsingle function that checks if there are four of a kind in the hand
+    function canWinSingle() {
+        // retrieve my hand as a list
+        const hand = $('#hand').text().split(', ');
+        // count the number of each card
+        const counts = {};
+        for (let i = 0; i < hand.length; i++) {
+            counts[hand[i]] = 1 + (counts[hand[i]] || 0);
+        }
+        // if there are four of a kind, return true
+        for (let card in counts) {
+            if (counts[card] == 4) {
+                return card;
+            }
+        }
+        return false;
+    }
 
     // emit id change
     socket.emit('change sid 2', { 'old': oldId });
@@ -95,9 +113,15 @@
         if (turn == socket.id) {
             // Add an asterisk next to my name
             $('#me').append(' *');
+
+            if (card = canWinSingle()) {
+                socket.emit('win single', { 'card': card });
+                return;
+            }
+
             if (relationship.length > 0) {
                 // Change the relationship message to say awaiting trust card
-                $('#relationship').text('Awaiting trust card');
+                $('#relationship').text('Awaiting trust card...');
             } else if (mustGhost.length == 0) {
                 $('.player').each(function () {
                         $(this).append(' <button id="askout' + $(this).attr('id') + '" class="askout">Ask on a date</button>');
@@ -242,7 +266,11 @@
                     // remove the relationship
                     $('#' + data['origin'] + ' > .mustGhost').remove();
                     // emit a ghost message
-                    socket.emit('ghost', { 'target': data['origin'], 'done': (mustGhost.length + $(".ghost").length) == 0 });
+                    const singleWin = canWinSingle();
+                    socket.emit('ghost', { 'target': data['origin'], 'done': (mustGhost.length + $(".ghost").length) == 0 && !singleWin });
+                    if (singleWin) {
+                        socket.emit('win single', { 'card': singleWin });
+                    }
                 } else if (data['origin'] == relationship) {
                     // Remove the relationship message
                     $('#relationship').remove();
@@ -401,9 +429,6 @@
     $(document).on('click', '.ghost', function () {
         // get the trust card
         const trust = $('#trustHand').text().replace('Trust card: ', '');
-        // emit a ghost message
-        socket.emit('ghost', { 'target': relationship, 'done': mustGhost.length == 0 });
-        relationship = '';
         // Add the trust card to the hand
         $('#hand').append(', ' + trust);
         // Remove the trustHand
@@ -413,6 +438,14 @@
         $('.followthrough').remove();
         // remove the relationship
         $('#relationship').remove();
+        const singleWin = canWinSingle();
+        console.log(singleWin);
+        // emit a ghost message
+        socket.emit('ghost', { 'target': relationship, 'done': mustGhost.length == 0 && !singleWin });
+        relationship = '';
+        if (singleWin) {
+            socket.emit('win single', { 'card': singleWin });
+        }
         return false;
     });
 
@@ -467,6 +500,10 @@
 
     // when I get a follow through message, log
     socket.on('follow through', function (data) {
+        log(data.log);
+    });
+
+    socket.on('win', function (data) {
         log(data.log);
     });
 
