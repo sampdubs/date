@@ -182,9 +182,12 @@ def lose(sid, data):
     order.remove(data['target'])
     print(sid, "and", data['target'], "lost")
     print(order)
-    if len(order) > 0:
+    if len(order) > 1:
         turn = order.index(next_player) - 1
         next_turn()
+    elif len(order) == 1:
+        sio.emit('win', {'winners': [order[0]], 'log': '<b>' + players[order[0]].name + ' won because they were the last one standing.</b>'})
+        print(order[0], "won by default")
     else:
         sio.emit('game over', {'log': '<b>Game over. Everyone is out.</b>'})
         print('game over')
