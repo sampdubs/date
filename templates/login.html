@@ -22,8 +22,9 @@
 
 <script>
     // Connect to the socket.io server
-    const socket = io.connect('http://' + document.domain + ':' + location.port);
-
+    const socket = io.connect('https://' + document.domain + ':' + location.port, {
+        secure: true
+    });
     // When the page is ready, focus the input box
     $(document).ready(function () {
         $('#name').focus();

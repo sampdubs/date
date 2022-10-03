@@ -21,8 +21,9 @@
 
 <script>
     // Connect to the socket.io server
-    const socket = io.connect('http://' + document.domain + ':' + location.port);
-
+    const socket = io.connect('https://' + document.domain + ':' + location.port, {
+        secure: true
+    });
     const urlParts = window.location.href.split('/');
     const oldId = urlParts.pop() || urlParts.pop();
 

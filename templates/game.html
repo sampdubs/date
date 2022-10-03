@@ -28,7 +28,9 @@
 <script src={{ url_for('static', filename='socket.io.min.js' ) }}></script>
 
 <script>
-    const socket = io.connect('http://' + document.domain + ':' + location.port);
+    const socket = io.connect('https://' + document.domain + ':' + location.port, {
+        secure: true
+    });
 
     const urlParts = window.location.href.split('/');
     const oldId = urlParts.pop() || urlParts.pop();
