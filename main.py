@@ -196,6 +196,6 @@ def lose(sid, data):
 if __name__ == '__main__':
     # initialize the app with flask and socketio
     app = socketio.WSGIApp(sio, app)
-    print('started server')
+    print('started server on port 8080')
     # start the server on localhost port 8080
     eventlet.wsgi.server(eventlet.listen(('', 8080)), app, log_output=False, debug=True)
