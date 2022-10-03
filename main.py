@@ -158,7 +158,7 @@ def follow_through(sid, data):
 
 @sio.on('win single')
 def win_solo(sid, data):
-    sio.emit('win', {'log': '<b>' + players[sid].name + ' won single with a set of ' + data['card'] + 's.</b>'})
+    sio.emit('win', {'winners': [sid], 'log': '<b>' + players[sid].name + ' won single with a set of ' + data['card'] + 's.</b>'})
     print(sid, "won single with a set of", data['card'] + 's')
 
 @sio.on('declare set')
