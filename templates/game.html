@@ -314,6 +314,7 @@
             socket.emit('no second date', { 'target': so });
             // Remove accepted
             $('#accepted').remove();
+            relationship = '';
             // send back the trust card
             const trust = $('#trustHand').text().replace('Trust card: ', '');
             socket.emit('return trust', { 'card': trust, 'target': so });
@@ -356,6 +357,7 @@
         if (data.target == socket.id) {
             // Add the trust card to my hand
             $('#hand').append(', ' + data.card);
+            relationship = '';
         }
 
         log(data.log);
@@ -397,6 +399,7 @@
             socket.emit('reject second date', { 'target': so });
             // Return the trust card
             socket.emit('return trust', { 'card': trust, 'target': so });
+            relationship = '';
         }
         // Remove the trustHand and accepted and secondresponse buttons
         $('#trustHand').remove();
